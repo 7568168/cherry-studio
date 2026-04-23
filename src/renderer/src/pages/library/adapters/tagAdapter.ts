@@ -1,18 +1,19 @@
 import { dataApiService } from '@data/DataApiService'
 import { useMutation, useQuery } from '@data/hooks/useDataApi'
-import type { Tag, TaggableEntityType } from '@shared/data/types/tag'
+import type { EntityType } from '@shared/data/types/entityType'
+import type { Tag } from '@shared/data/types/tag'
 import { useCallback, useMemo } from 'react'
 
 import { getRandomTagColor } from '../constants'
 import type { ResourceType } from '../types'
 import type { EntityTagsResult, TagListResult } from './types'
 
-// TaggableEntityType currently enumerates 'assistant' | 'topic' | 'session'.
+// EntityType currently enumerates 'assistant' | 'topic' | 'session'.
 // For this PR, only 'assistant' is wired through the tag API; 'agent' / 'skill'
 // short-circuit to an empty result until the enum is extended in a follow-up task.
 const SUPPORTED_ENTITY_TYPES: readonly ResourceType[] = ['assistant'] as const
 
-function isSupportedEntityType(type: ResourceType): type is Extract<TaggableEntityType, ResourceType> {
+function isSupportedEntityType(type: ResourceType): type is Extract<EntityType, ResourceType> {
   return SUPPORTED_ENTITY_TYPES.includes(type)
 }
 
@@ -41,7 +42,7 @@ export function useEntityTags(entityType: ResourceType, entityId: string | undef
     if (!supported || !entityId) {
       return '/tags/entities/assistant/placeholder' as const
     }
-    return `/tags/entities/${entityType as TaggableEntityType}/${entityId}` as const
+    return `/tags/entities/${entityType as EntityType}/${entityId}` as const
   }, [supported, entityType, entityId])
 
   const { data, isLoading, error, refetch } = useQuery(path, { enabled: supported })

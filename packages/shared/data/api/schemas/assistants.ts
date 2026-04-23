@@ -8,7 +8,6 @@
 import * as z from 'zod'
 
 import { type Assistant, AssistantSchema } from '../../types/assistant'
-import { AutoFields } from '../../types/index'
 import { TagIdSchema } from '../../types/tag'
 import type { OffsetPaginationResponse } from '../apiTypes'
 
@@ -17,13 +16,25 @@ import type { OffsetPaginationResponse } from '../apiTypes'
 // ============================================================================
 
 /**
- * Fields that are read-only from the assistant endpoints and managed elsewhere:
- * - `tags` is embedded on read via inline join; writes use `tagIds` on the
- *   create / update DTOs so binding is atomic with the assistant row.
+ * Mutable assistant fields — explicit whitelist of everything a client may write.
+ * Anything not listed here (id, createdAt, updatedAt, tags, modelName, future
+ * auto-managed columns) is rejected at the API boundary by default.
+ *
+ * Not in the whitelist:
+ * - `tags` is embedded on read via inline join; writes use `tagIds` below.
  * - `modelName` is resolved at read time from `user_model.name`; edits go via
  *   `modelId`.
  */
-const ReadOnlyAssistantFields = { ...AutoFields, tags: true, modelName: true } as const
+const ASSISTANT_MUTABLE_FIELDS = {
+  name: true,
+  prompt: true,
+  emoji: true,
+  description: true,
+  settings: true,
+  modelId: true,
+  mcpServerIds: true,
+  knowledgeBaseIds: true
+} as const
 
 /**
  * Shared tag-binding field for Create / Update DTOs.
@@ -39,21 +50,17 @@ const TagIdsField = z.array(TagIdSchema).optional()
  * - `name` is required (non-empty)
  * - `mcpServerIds` / `knowledgeBaseIds` / `tagIds` are synced to junction tables
  */
-export const CreateAssistantSchema = AssistantSchema.omit(ReadOnlyAssistantFields)
+export const CreateAssistantSchema = AssistantSchema.pick(ASSISTANT_MUTABLE_FIELDS)
   .partial()
   .required({ name: true })
   .extend({ tagIds: TagIdsField })
 export type CreateAssistantDto = z.infer<typeof CreateAssistantSchema>
 
 /**
- * DTO for updating an existing assistant.
- * All fields optional, `id` excluded (comes from URL path).
- * Relation arrays (mcpServerIds, knowledgeBaseIds, tagIds), if provided,
- * replace existing junction table rows.
+ * DTO for updating an existing assistant. All fields optional, chain-derived from Create.
+ * Relation arrays (mcpServerIds, knowledgeBaseIds, tagIds), if provided, replace existing junction table rows.
  */
-export const UpdateAssistantSchema = AssistantSchema.omit(ReadOnlyAssistantFields)
-  .partial()
-  .extend({ tagIds: TagIdsField })
+export const UpdateAssistantSchema = CreateAssistantSchema.partial()
 export type UpdateAssistantDto = z.infer<typeof UpdateAssistantSchema>
 
 export const ASSISTANTS_DEFAULT_PAGE = 1
@@ -102,7 +109,7 @@ export type ListAssistantsQuery = z.output<typeof ListAssistantsQuerySchema>
 /**
  * Assistant API Schema definitions
  */
-export interface AssistantSchemas {
+export type AssistantSchemas = {
   /**
    * Assistants collection endpoint
    * @example GET /assistants

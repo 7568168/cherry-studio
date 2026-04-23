@@ -87,17 +87,17 @@ cacheService.deleteCasual(`topic:${id}`);
 ### Shared Cache
 
 ```typescript
-// Type-safe (schema key)
+// Fixed key (schema-defined)
 cacheService.setShared("window.layout", layoutConfig);
 const layout = cacheService.getShared("window.layout");
 
-// Casual (dynamic key)
-cacheService.setSharedCasual<WindowState>(`window:${windowId}`, state);
-const state = cacheService.getSharedCasual<WindowState>(`window:${windowId}`);
+// Template key (schema: 'window.state.${windowId}')
+// Type is inferred automatically from the matching schema entry
+cacheService.setShared(`window.state.${windowId}` as const, state);
+const state = cacheService.getShared(`window.state.${windowId}` as const);
 
 // Delete
 cacheService.deleteShared("window.layout");
-cacheService.deleteSharedCasual(`window:${windowId}`);
 ```
 
 ### Persist Cache
@@ -138,7 +138,7 @@ if (cacheService.hasShared("window.layout")) {
 cacheService.deleteShared("window.layout");
 ```
 
-**Note**: Main CacheService does NOT support Casual methods (`getSharedCasual`, etc.). Only schema-based type-safe access is available in Main process.
+**Note**: SharedCache supports both fixed and template keys on Main and Renderer (aligned with Memory cache). Casual (schema-bypassing) access is not supported on SharedCache — if you need a dynamic key that isn't worth schematising, use Memory `getCasual` / `setCasual` instead.
 
 ### Sync Strategy
 
@@ -159,8 +159,9 @@ cacheService.deleteShared("window.layout");
 const [counter, setCounter] = useCache("ui.counter", 0);
 ```
 
-### Casual Methods
+### Casual Methods (Memory tier only)
 
+- Available only on the **Memory** tier (`getCasual` / `setCasual` / `hasCasual` / `deleteCasual` / `hasTTLCasual`). Shared and Persist tiers do not expose casual variants — all Shared access goes through the schema (fixed or template keys).
 - Use dynamically constructed keys
 - Require manual type specification via generics
 - No compile-time key validation
@@ -174,6 +175,8 @@ const topic = cacheService.getCasual<TopicCache>(`my.custom.key`);
 cacheService.getCasual("app.user.avatar"); // Error: matches fixed key
 cacheService.getCasual("scroll.position.topic123"); // Error: matches template key
 ```
+
+If you need a cross-window dynamic key, define a template key in `SharedCacheSchema` and use the type-safe `getShared` / `setShared` — there is no `getSharedCasual`.
 
 ### Template Keys
 
@@ -220,13 +223,14 @@ cacheService.set("scroll.position.mytopic", "hi"); // Error: type mismatch
 
 #### Template Key Benefits
 
-| Feature                 | Fixed Keys   | Template Keys          | Casual Methods |
-| ----------------------- | ------------ | ---------------------- | -------------- |
-| Type inference          | ✅ Automatic | ✅ Automatic           | ❌ Manual      |
-| Auto-completion         | ✅ Full      | ✅ Partial (prefix)    | ❌ None        |
-| Compile-time validation | ✅ Yes       | ✅ Yes                 | ❌ No          |
-| Dynamic IDs             | ❌ No        | ✅ Yes                 | ✅ Yes         |
-| Default values          | ✅ Yes       | ✅ Shared per template | ❌ No          |
+| Feature                 | Fixed Keys   | Template Keys          | Casual Methods (Memory only) |
+| ----------------------- | ------------ | ---------------------- | ---------------------------- |
+| Type inference          | ✅ Automatic | ✅ Automatic           | ❌ Manual                    |
+| Auto-completion         | ✅ Full      | ✅ Partial (prefix)    | ❌ None                      |
+| Compile-time validation | ✅ Yes       | ✅ Yes                 | ❌ No                        |
+| Dynamic IDs             | ❌ No        | ✅ Yes                 | ✅ Yes                       |
+| Cross-window (Shared)   | ✅ Yes       | ✅ Yes                 | ❌ No                        |
+| Default values          | ✅ Yes       | ✅ Shared per template | ❌ No                        |
 
 ### When to Use Which
 

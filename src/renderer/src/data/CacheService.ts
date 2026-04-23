@@ -19,11 +19,11 @@
 
 import { loggerService } from '@logger'
 import type {
+  InferSharedCacheValue,
   InferUseCacheValue,
   RendererPersistCacheKey,
   RendererPersistCacheSchema,
   SharedCacheKey,
-  SharedCacheSchema,
   UseCacheKey
 } from '@shared/data/cache/cacheSchemas'
 import { DefaultRendererPersistCache } from '@shared/data/cache/cacheSchemas'
@@ -399,16 +399,6 @@ export class CacheService {
     return entry?.expireAt !== undefined
   }
 
-  /**
-   * Check if a shared cache key has TTL set (casual, dynamic key)
-   * @param key - Dynamic shared cache key
-   * @returns True if key has TTL configured
-   */
-  hasSharedTTLCasual(key: Exclude<string, SharedCacheKey>): boolean {
-    const entry = this.sharedCache.get(key)
-    return entry?.expireAt !== undefined
-  }
-
   // ============ Shared Cache (Cross-window) ============
 
   /**
@@ -416,16 +406,7 @@ export class CacheService {
    * @param key - Schema-defined shared cache key
    * @returns Cached value or undefined if not found or expired
    */
-  getShared<K extends SharedCacheKey>(key: K): SharedCacheSchema[K] | undefined {
-    return this.getSharedInternal(key)
-  }
-
-  /**
-   * Get value from shared cache with TTL validation (casual, dynamic key)
-   * @param key - Dynamic shared cache key (e.g., `window:${id}`)
-   * @returns Cached value or undefined if not found or expired
-   */
-  getSharedCasual<T>(key: Exclude<string, SharedCacheKey>): T | undefined {
+  getShared<K extends SharedCacheKey>(key: K): InferSharedCacheValue<K> | undefined {
     return this.getSharedInternal(key)
   }
 
@@ -452,17 +433,7 @@ export class CacheService {
    * @param value - Value to cache (type inferred from schema)
    * @param ttl - Time to live in milliseconds (optional)
    */
-  setShared<K extends SharedCacheKey>(key: K, value: SharedCacheSchema[K], ttl?: number): void {
-    this.setSharedInternal(key, value, ttl)
-  }
-
-  /**
-   * Set value in shared cache with cross-window synchronization (casual, dynamic key)
-   * @param key - Dynamic shared cache key (e.g., `window:${id}`)
-   * @param value - Value to cache
-   * @param ttl - Time to live in milliseconds (optional)
-   */
-  setSharedCasual<T>(key: Exclude<string, SharedCacheKey>, value: T, ttl?: number): void {
+  setShared<K extends SharedCacheKey>(key: K, value: InferSharedCacheValue<K>, ttl?: number): void {
     this.setSharedInternal(key, value, ttl)
   }
 
@@ -521,15 +492,6 @@ export class CacheService {
   }
 
   /**
-   * Check if key exists in shared cache and is not expired (casual, dynamic key)
-   * @param key - Dynamic shared cache key
-   * @returns True if key exists and is valid, false otherwise
-   */
-  hasSharedCasual(key: Exclude<string, SharedCacheKey>): boolean {
-    return this.hasSharedInternal(key)
-  }
-
-  /**
    * Internal implementation for shared cache has
    */
   private hasSharedInternal(key: string): boolean {
@@ -552,15 +514,6 @@ export class CacheService {
    * @returns True if deletion succeeded, false if key is protected by active hooks
    */
   deleteShared<K extends SharedCacheKey>(key: K): boolean {
-    return this.deleteSharedInternal(key)
-  }
-
-  /**
-   * Delete from shared cache with cross-window synchronization and hook protection (casual, dynamic key)
-   * @param key - Dynamic shared cache key
-   * @returns True if deletion succeeded, false if key is protected by active hooks
-   */
-  deleteSharedCasual(key: Exclude<string, SharedCacheKey>): boolean {
     return this.deleteSharedInternal(key)
   }
 

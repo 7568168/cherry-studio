@@ -20,7 +20,7 @@
 import { loggerService } from '@logger'
 import { BaseService, Injectable, ServicePhase } from '@main/core/lifecycle'
 import { Phase } from '@main/core/lifecycle'
-import type { SharedCacheKey, SharedCacheSchema } from '@shared/data/cache/cacheSchemas'
+import type { InferSharedCacheValue, SharedCacheKey } from '@shared/data/cache/cacheSchemas'
 import type { CacheEntry, CacheSyncMessage } from '@shared/data/cache/cacheTypes'
 import { IpcChannel } from '@shared/IpcChannel'
 import { BrowserWindow } from 'electron'
@@ -173,7 +173,7 @@ export class CacheService extends BaseService {
    * @param key - Schema-defined shared cache key
    * @returns Cached value or undefined if not found or expired
    */
-  getShared<K extends SharedCacheKey>(key: K): SharedCacheSchema[K] | undefined {
+  getShared<K extends SharedCacheKey>(key: K): InferSharedCacheValue<K> | undefined {
     const entry = this.sharedCache.get(key)
     if (!entry) return undefined
 
@@ -183,7 +183,7 @@ export class CacheService extends BaseService {
       return undefined
     }
 
-    return entry.value as SharedCacheSchema[K]
+    return entry.value as InferSharedCacheValue<K>
   }
 
   /**
@@ -192,7 +192,7 @@ export class CacheService extends BaseService {
    * @param value - Value to cache (type inferred from schema)
    * @param ttl - Time to live in milliseconds (optional)
    */
-  setShared<K extends SharedCacheKey>(key: K, value: SharedCacheSchema[K], ttl?: number): void {
+  setShared<K extends SharedCacheKey>(key: K, value: InferSharedCacheValue<K>, ttl?: number): void {
     const expireAt = ttl ? Date.now() + ttl : undefined
     const entry: CacheEntry = { value, expireAt }
 

@@ -62,13 +62,13 @@ import { MockMainCacheServiceUtils } from '@test-mocks/main/CacheService'
 
 ### CacheService
 
-Three-tier cache system with type-safe and casual (dynamic key) methods.
+Three-tier cache system with type-safe methods (and casual/dynamic key methods on the Memory tier only).
 
 #### Methods
 
 | Category | Method | Signature |
 |----------|--------|-----------|
-| Memory (typed) | `get` | `<K>(key: K) => UseCacheSchema[K]` |
+| Memory (typed) | `get` | `<K>(key: K) => InferUseCacheValue<K>` |
 | Memory (typed) | `set` | `<K>(key: K, value, ttl?) => void` |
 | Memory (typed) | `has` | `<K>(key: K) => boolean` |
 | Memory (typed) | `delete` | `<K>(key: K) => boolean` |
@@ -78,16 +78,11 @@ Three-tier cache system with type-safe and casual (dynamic key) methods.
 | Memory (casual) | `hasCasual` | `(key: string) => boolean` |
 | Memory (casual) | `deleteCasual` | `(key: string) => boolean` |
 | Memory (casual) | `hasTTLCasual` | `(key: string) => boolean` |
-| Shared (typed) | `getShared` | `<K>(key: K) => SharedCacheSchema[K]` |
+| Shared (typed) | `getShared` | `<K>(key: K) => InferSharedCacheValue<K>` |
 | Shared (typed) | `setShared` | `<K>(key: K, value, ttl?) => void` |
 | Shared (typed) | `hasShared` | `<K>(key: K) => boolean` |
 | Shared (typed) | `deleteShared` | `<K>(key: K) => boolean` |
 | Shared (typed) | `hasSharedTTL` | `<K>(key: K) => boolean` |
-| Shared (casual) | `getSharedCasual` | `<T>(key: string) => T \| undefined` |
-| Shared (casual) | `setSharedCasual` | `<T>(key, value, ttl?) => void` |
-| Shared (casual) | `hasSharedCasual` | `(key: string) => boolean` |
-| Shared (casual) | `deleteSharedCasual` | `(key: string) => boolean` |
-| Shared (casual) | `hasSharedTTLCasual` | `(key: string) => boolean` |
 | Persist | `getPersist` | `<K>(key: K) => RendererPersistCacheSchema[K]` |
 | Persist | `setPersist` | `<K>(key: K, value) => void` |
 | Persist | `hasPersist` | `(key) => boolean` |

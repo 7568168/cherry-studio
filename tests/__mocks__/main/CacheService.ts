@@ -1,4 +1,4 @@
-import type { SharedCacheKey, SharedCacheSchema } from '@shared/data/cache/cacheSchemas'
+import type { InferSharedCacheValue, SharedCacheKey } from '@shared/data/cache/cacheSchemas'
 import type { CacheEntry, CacheSyncMessage } from '@shared/data/cache/cacheTypes'
 import { vi } from 'vitest'
 
@@ -78,7 +78,7 @@ export class MockMainCacheService {
 
   // ============ Shared Cache Methods ============
 
-  public getShared = vi.fn(<K extends SharedCacheKey>(key: K): SharedCacheSchema[K] | undefined => {
+  public getShared = vi.fn(<K extends SharedCacheKey>(key: K): InferSharedCacheValue<K> | undefined => {
     const entry = mockSharedCache.get(key)
     if (!entry) return undefined
 
@@ -88,10 +88,10 @@ export class MockMainCacheService {
       return undefined
     }
 
-    return entry.value as SharedCacheSchema[K]
+    return entry.value as InferSharedCacheValue<K>
   })
 
-  public setShared = vi.fn(<K extends SharedCacheKey>(key: K, value: SharedCacheSchema[K], ttl?: number): void => {
+  public setShared = vi.fn(<K extends SharedCacheKey>(key: K, value: InferSharedCacheValue<K>, ttl?: number): void => {
     const entry: CacheEntry = {
       value,
       expireAt: ttl ? Date.now() + ttl : undefined
@@ -240,7 +240,7 @@ export const MockMainCacheServiceUtils = {
   /**
    * Set shared cache value for testing
    */
-  setSharedCacheValue: <K extends SharedCacheKey>(key: K, value: SharedCacheSchema[K], ttl?: number) => {
+  setSharedCacheValue: <K extends SharedCacheKey>(key: K, value: InferSharedCacheValue<K>, ttl?: number) => {
     const entry: CacheEntry = {
       value,
       expireAt: ttl ? Date.now() + ttl : undefined
@@ -251,7 +251,7 @@ export const MockMainCacheServiceUtils = {
   /**
    * Get shared cache value for testing
    */
-  getSharedCacheValue: <K extends SharedCacheKey>(key: K): SharedCacheSchema[K] | undefined => {
+  getSharedCacheValue: <K extends SharedCacheKey>(key: K): InferSharedCacheValue<K> | undefined => {
     const entry = mockSharedCache.get(key)
     if (!entry) return undefined
 
@@ -261,7 +261,7 @@ export const MockMainCacheServiceUtils = {
       return undefined
     }
 
-    return entry.value as SharedCacheSchema[K]
+    return entry.value as InferSharedCacheValue<K>
   },
 
   /**
