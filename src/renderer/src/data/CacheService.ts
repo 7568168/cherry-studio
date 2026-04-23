@@ -35,6 +35,7 @@ import type {
   CacheSyncMessage,
   CacheTierSummary
 } from '@shared/data/cache/cacheTypes'
+import { isEqual } from 'lodash'
 
 const STORAGE_PERSIST_KEY = 'cs_cache_persist'
 
@@ -237,8 +238,9 @@ export class CacheService {
   private setInternal(key: string, value: any, ttl?: number): void {
     const existingEntry = this.memoryCache.get(key)
 
-    // Value comparison optimization
-    if (existingEntry && Object.is(existingEntry.value, value)) {
+    // Value comparison optimization: deep-equal value is treated as unchanged
+    // so object/array/Record values are short-circuited by content, not reference.
+    if (existingEntry && isEqual(existingEntry.value, value)) {
       // Value is same, only update TTL if needed
       const newExpireAt = ttl ? Date.now() + ttl : undefined
       if (!Object.is(existingEntry.expireAt, newExpireAt)) {
@@ -444,8 +446,10 @@ export class CacheService {
     const existingEntry = this.sharedCache.get(key)
     const newExpireAt = ttl ? Date.now() + ttl : undefined
 
-    // Value comparison optimization
-    if (existingEntry && Object.is(existingEntry.value, value)) {
+    // Value comparison optimization: deep-equal value is treated as unchanged
+    // to skip redundant cross-window broadcast (Record/Array values always
+    // rebuild new references even when content is unchanged).
+    if (existingEntry && isEqual(existingEntry.value, value)) {
       // Value is same, only update TTL if needed
       if (!Object.is(existingEntry.expireAt, newExpireAt)) {
         existingEntry.expireAt = newExpireAt
@@ -576,7 +580,7 @@ export class CacheService {
     const existingValue = this.persistCache.get(key)
 
     // Use deep comparison for persist cache (usually objects)
-    if (this.deepEqual(existingValue, value)) {
+    if (isEqual(existingValue, value)) {
       logger.verbose(`Skipped persist cache update for key "${key}" - value unchanged`)
       return // Skip all updates
     }
@@ -941,44 +945,6 @@ export class CacheService {
   }
 
   // ============ Private Methods ============
-
-  /**
-   * Perform deep equality comparison for cache values
-   * @param a - First value to compare
-   * @param b - Second value to compare
-   * @returns True if values are deeply equal
-   */
-  private deepEqual(a: any, b: any): boolean {
-    // Use Object.is for primitive values and same reference
-    if (Object.is(a, b)) return true
-
-    // Different types or null/undefined cases
-    if (typeof a !== 'object' || typeof b !== 'object') return false
-    if (a === null || b === null) return false
-
-    // Array comparison
-    if (Array.isArray(a) !== Array.isArray(b)) return false
-    if (Array.isArray(a)) {
-      if (a.length !== b.length) return false
-      for (let i = 0; i < a.length; i++) {
-        if (!this.deepEqual(a[i], b[i])) return false
-      }
-      return true
-    }
-
-    // Object comparison
-    const keysA = Object.keys(a)
-    const keysB = Object.keys(b)
-
-    if (keysA.length !== keysB.length) return false
-
-    for (const key of keysA) {
-      if (!keysB.includes(key)) return false
-      if (!this.deepEqual(a[key], b[key])) return false
-    }
-
-    return true
-  }
 
   /**
    * Load persist cache from localStorage with default value initialization

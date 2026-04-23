@@ -6,11 +6,11 @@ import type {
   RendererPersistCacheKey,
   RendererPersistCacheSchema,
   SharedCacheKey,
-  SharedCacheSchema,
   UseCacheKey,
   UseCacheSchema
 } from '@shared/data/cache/cacheSchemas'
 import { DefaultSharedCache, DefaultUseCache } from '@shared/data/cache/cacheSchemas'
+import { findMatchingSharedCacheSchemaKey, isTemplateKey, templateToRegex } from '@shared/data/cache/templateKey'
 import { useCallback, useEffect, useSyncExternalStore } from 'react'
 
 const logger = loggerService.withContext('useCache')
@@ -18,61 +18,6 @@ const logger = loggerService.withContext('useCache')
 // ============================================================================
 // Template Matching Utilities
 // ============================================================================
-
-/**
- * Checks if a schema key is a template key (contains ${...} placeholder).
- *
- * @param key - The schema key to check
- * @returns true if the key contains template placeholder syntax
- *
- * @example
- * ```typescript
- * isTemplateKey('scroll.position.${id}')  // true
- * isTemplateKey('app.user.avatar')        // false
- * ```
- */
-function isTemplateKey(key: string): boolean {
-  return key.includes('${') && key.includes('}')
-}
-
-/**
- * Converts a template key pattern into a RegExp for matching concrete keys.
- *
- * Each `${variable}` placeholder is replaced with a pattern that matches
- * any non-empty string of word characters (letters, numbers, underscores, hyphens).
- *
- * Template keys follow the same dot-separated pattern as fixed keys.
- * When ${xxx} is treated as a literal string, the key matches: xxx.yyy.zzz_www
- *
- * @param template - The template key pattern (e.g., 'scroll.position.${id}')
- * @returns A RegExp that matches concrete keys for this template
- *
- * @example
- * ```typescript
- * const regex = templateToRegex('scroll.position.${id}')
- * regex.test('scroll.position.topic123')   // true
- * regex.test('scroll.position.topic-123')  // true
- * regex.test('scroll.position.')           // false
- * regex.test('other.key.123')              // false
- * ```
- */
-function templateToRegex(template: string): RegExp {
-  // Escape special regex characters except for ${...} placeholders
-  const escaped = template.replace(/[.*+?^${}()|[\]\\]/g, (match) => {
-    // Don't escape the ${...} syntax, we'll handle it specially
-    if (match === '$' || match === '{' || match === '}') {
-      return match
-    }
-    return '\\' + match
-  })
-
-  // Replace ${...} placeholders with a pattern matching non-empty strings
-  // Allows: word chars (letters, numbers, underscores) and hyphens
-  // Does NOT allow dots or colons since those are structural separators
-  const pattern = escaped.replace(/\$\{[^}]+\}/g, '([\\w\\-]+)')
-
-  return new RegExp(`^${pattern}$`)
-}
 
 /**
  * Finds the schema key that matches a given concrete key.
@@ -137,31 +82,6 @@ function getUseCacheDefaultValue<K extends UseCacheKey>(key: K): InferUseCacheVa
   if (schemaKey) {
     return DefaultUseCache[schemaKey] as InferUseCacheValue<K>
   }
-  return undefined
-}
-
-/**
- * Finds the shared schema key that matches a given concrete key.
- *
- * Mirrors findMatchingUseCacheSchemaKey but operates over SharedCacheSchema.
- * Returns the exact schema key (fixed or template pattern), not the concrete
- * instance — callers use it to look up the template's default value.
- */
-function findMatchingSharedCacheSchemaKey(key: string): keyof SharedCacheSchema | undefined {
-  if (key in DefaultSharedCache) {
-    return key as keyof SharedCacheSchema
-  }
-
-  const schemaKeys = Object.keys(DefaultSharedCache) as Array<keyof SharedCacheSchema>
-  for (const schemaKey of schemaKeys) {
-    if (isTemplateKey(schemaKey as string)) {
-      const regex = templateToRegex(schemaKey as string)
-      if (regex.test(key)) {
-        return schemaKey
-      }
-    }
-  }
-
   return undefined
 }
 

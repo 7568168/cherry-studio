@@ -1,4 +1,4 @@
-import type { InferSharedCacheValue, SharedCacheKey } from '@shared/data/cache/cacheSchemas'
+import type { InferSharedCacheValue, ProcessKey, SharedCacheKey } from '@shared/data/cache/cacheSchemas'
 import type { CacheEntry, CacheSyncMessage } from '@shared/data/cache/cacheTypes'
 import { vi } from 'vitest'
 
@@ -140,6 +140,27 @@ export class MockMainCacheService {
 
     return true
   })
+
+  // ============ Subscription Methods ============
+  // These are call-tracking stubs — the mock does NOT replicate fire semantics.
+  // Each call returns a fresh vi.fn() unsubscribe stub, useful for verifying
+  // `registerDisposable(cacheService.subscribeChange(...))` wiring in tests.
+
+  public subscribeChange = vi.fn(
+    <T = unknown>(_key: string, _callback: (newValue: T | undefined, oldValue: T | undefined) => void): (() => void) =>
+      vi.fn()
+  )
+
+  public subscribeSharedChange = vi.fn(
+    <K extends SharedCacheKey>(
+      _key: K,
+      _callback: (
+        newValue: InferSharedCacheValue<K> | undefined,
+        oldValue: InferSharedCacheValue<K> | undefined,
+        concreteKey: ProcessKey<K & string>
+      ) => void
+    ): (() => void) => vi.fn()
+  )
 
   // Mock cleanup
   public cleanup = vi.fn((): void => {
@@ -349,6 +370,8 @@ export const MockMainCacheServiceUtils = {
     setShared: mockInstance.setShared.mock.calls.length,
     hasShared: mockInstance.hasShared.mock.calls.length,
     deleteShared: mockInstance.deleteShared.mock.calls.length,
+    subscribeChange: mockInstance.subscribeChange.mock.calls.length,
+    subscribeSharedChange: mockInstance.subscribeSharedChange.mock.calls.length,
     cleanup: mockInstance.cleanup.mock.calls.length
   })
 }

@@ -364,6 +364,10 @@ Internal cache and cross-window shared cache.
 | Shared | `setShared` | `<K>(key: K, value, ttl?) => void` |
 | Shared | `hasShared` | `<K>(key: K) => boolean` |
 | Shared | `deleteShared` | `<K>(key: K) => boolean` |
+| Subscription | `subscribeChange` | `<T>(key, callback) => () => void` — returns a fresh `vi.fn()` unsubscribe stub |
+| Subscription | `subscribeSharedChange` | `<K>(key, callback) => () => void` — returns a fresh `vi.fn()` unsubscribe stub |
+
+> **Note on subscription mocks**: `subscribeChange` / `subscribeSharedChange` are call-tracking stubs — they do **not** replicate the real fire semantics. Use them to verify `registerDisposable(cacheService.subscribeChange(...))` wiring and that subscriptions happen, not to simulate callbacks. The `setShared` / `deleteShared` mocks also record every call to `broadcastCalls` unconditionally (no `isEqual` short-circuit), keeping `getBroadcastHistory()` consumers backward-compatible.
 
 ```typescript
 import { MockMainCacheServiceUtils } from '@test-mocks/main/CacheService'
