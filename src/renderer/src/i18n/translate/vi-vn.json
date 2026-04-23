@@ -1504,23 +1504,11 @@
     "bun_required_message": "Môi trường Bun là bắt buộc để chạy các công cụ CLI",
     "cli_tool": "Công cụ CLI",
     "cli_tool_placeholder": "Chọn công cụ CLI để sử dụng",
-    "count_one": "[to be translated]:{{count}} item",
-    "count_other": "[to be translated]:{{count}} items",
     "custom_path": "Đường dẫn tùy chỉnh",
     "custom_path_error": "Falha ao definir caminho personalizado do terminal",
     "custom_path_required": "Chemin personnalisé requis pour ce terminal",
     "custom_path_set": "Đường dẫn terminal tùy chỉnh đã được đặt thành công",
     "description": "Khởi chạy nhanh nhiều công cụ CLI mã để nâng cao hiệu suất phát triển",
-    "empty": {
-      "no_match": {
-        "description": "[to be translated]:Try adjusting your search terms",
-        "title": "[to be translated]:No matching tools found"
-      },
-      "no_tool": {
-        "description": "[to be translated]:Add a CLI tool or code assistant to get started",
-        "title": "[to be translated]:No code tools yet"
-      }
-    },
     "env_vars_help": "Nhập các biến môi trường tùy chỉnh (mỗi dòng một biến, định dạng: KEY=value)",
     "environment_variables": "Biến Môi trường",
     "folder_placeholder": "Chọn thư mục làm việc",
@@ -1530,28 +1518,21 @@
       "bun_required": "Vui lòng cài đặt môi trường Bun trước khi khởi chạy các công cụ CLI",
       "error": "Lancement échoué, veuillez réessayer",
       "label": "Lanzamiento",
-      "launched": "[to be translated]:Launched",
       "success": "Khởi chạy thành công",
       "validation_error": "Vui lòng hoàn thành tất cả các trường bắt buộc: công cụ CLI, mô hình và thư mục làm việc"
     },
     "launching": "Lanzando...",
     "model": "Modelo",
-    "model_hint": "[to be translated]:Choose which AI model the CLI tool should use",
     "model_placeholder": "Chọn mô hình cần sử dụng",
     "model_required": "Vui lòng chọn một mô hình",
-    "official_tag": "[to be translated]:Official",
-    "official_tools": "[to be translated]:Official",
-    "search_placeholder": "[to be translated]:Search CLI tools…",
     "select_folder": "Pilih Folder",
     "set_custom_path": "Đặt đường dẫn terminal tùy chỉnh",
     "supported_providers": "Nhà cung cấp được hỗ trợ",
     "terminal": "Thiết bị đầu cuối",
-    "terminal_hint": "[to be translated]:Choose which terminal application to run the CLI in",
     "terminal_placeholder": "Chọn ứng dụng thiết bị đầu cuối",
     "title": "Công cụ mã",
     "update_options": "Tùy chọn Cập nhật",
-    "working_directory": "Thư mục làm việc",
-    "working_directory_hint": "[to be translated]:The working directory that the CLI tool launches in"
+    "working_directory": "Thư mục làm việc"
   },
   "code_block": {
     "collapse": "Colapso",
@@ -2158,6 +2139,106 @@
       "update": "[to be translated]:Update"
     },
     "config": {
+      "agent": {
+        "field": {
+          "accessible_paths": {
+            "add": "[to be translated]:Add directory",
+            "empty": "[to be translated]:Not set (defaults to the workspace root)",
+            "label": "[to be translated]:Accessible directories"
+          },
+          "allowed_tools": {
+            "add": "[to be translated]:Add tool",
+            "empty": "[to be translated]:Leave empty to use the permission mode default",
+            "label": "[to be translated]:Allowed tools"
+          },
+          "description": {
+            "label": "[to be translated]:Description",
+            "placeholder": "[to be translated]:What this agent is for…"
+          },
+          "env_vars": {
+            "help": "[to be translated]:One KEY=VALUE per line",
+            "label": "[to be translated]:Environment variables"
+          },
+          "heartbeat_enabled": {
+            "label": "[to be translated]:Heartbeat check"
+          },
+          "heartbeat_interval": {
+            "label": "[to be translated]:Heartbeat interval (minutes)"
+          },
+          "instructions": {
+            "label": "[to be translated]:System prompt",
+            "placeholder": "[to be translated]:Tell the agent who it is and what it can do…"
+          },
+          "max_turns": {
+            "help": "[to be translated]:0 means use the default",
+            "label": "[to be translated]:Max conversation turns"
+          },
+          "mcps": {
+            "add": "[to be translated]:Add MCP server",
+            "empty": "[to be translated]:None bound",
+            "label": "[to be translated]:MCP servers (id)"
+          },
+          "model": {
+            "help": "[to be translated]:UniqueModelId; will switch to a picker backed by /models later",
+            "hint": "[to be translated]:Main reasoning and execution",
+            "label": "[to be translated]:Primary model (required)"
+          },
+          "name": {
+            "label": "[to be translated]:Agent name",
+            "placeholder": "[to be translated]:Give the agent a name"
+          },
+          "permission_mode": {
+            "help": "[to be translated]:Switching to bypassPermissions is equivalent to enabling Soul mode",
+            "label": "[to be translated]:Permission mode",
+            "option": {
+              "acceptEdits": "[to be translated]:Accept edits",
+              "bypassPermissions": "[to be translated]:Bypass permissions (Soul)",
+              "default": "[to be translated]:Default",
+              "plan": "[to be translated]:Plan mode"
+            }
+          },
+          "plan_model": {
+            "hint": "[to be translated]:Task decomposition and planning",
+            "label": "[to be translated]:Plan model (optional)"
+          },
+          "small_model": {
+            "hint": "[to be translated]:Lightweight checks and formatting",
+            "label": "[to be translated]:Small model (optional)"
+          },
+          "soul_enabled": {
+            "help": "[to be translated]:When enabled, automatically grants bypassPermissions",
+            "label": "[to be translated]:Soul mode"
+          }
+        },
+        "model_config": "[to be translated]:Model configuration",
+        "section": {
+          "advanced": {
+            "desc": "[to be translated]:Execution limits and runtime parameters",
+            "label": "[to be translated]:Advanced",
+            "title": "[to be translated]:Advanced"
+          },
+          "basic": {
+            "desc": "[to be translated]:Agent name, description, and primary model",
+            "label": "[to be translated]:Basic",
+            "title": "[to be translated]:Basic"
+          },
+          "prompt": {
+            "desc": "[to be translated]:System prompt and behavioral constraints",
+            "label": "[to be translated]:Prompt",
+            "title": "[to be translated]:Prompt"
+          },
+          "tools": {
+            "desc": "[to be translated]:MCP servers, allowed tools, and runtime settings",
+            "label": "[to be translated]:Tools & runtime",
+            "title": "[to be translated]:Tools & runtime"
+          },
+          "workspace": {
+            "desc": "[to be translated]:Accessible directories and permission mode",
+            "label": "[to be translated]:Workspace & permissions",
+            "title": "[to be translated]:Workspace & permissions"
+          }
+        }
+      },
       "basic": {
         "context_count": "[to be translated]:Context count",
         "creative": "[to be translated]:Creative",
@@ -2277,6 +2358,12 @@
       "create": "[to be translated]:New {{type}}",
       "import": "[to be translated]:Import {{type}}"
     },
+    "delete": {
+      "agent": {
+        "content": "[to be translated]:Are you sure you want to delete this agent? This action cannot be undone.",
+        "title": "[to be translated]:Delete agent"
+      }
+    },
     "delete_confirm": {
       "cancel": "[to be translated]:Cancel",
       "confirm": "[to be translated]:Delete",
@@ -2364,6 +2451,7 @@
     "type": {
       "agent": "[to be translated]:Agent",
       "assistant": "[to be translated]:Assistant",
+      "new_agent": "[to be translated]:New agent",
       "new_assistant": "[to be translated]:New assistant",
       "skill": "[to be translated]:Skill"
     },
