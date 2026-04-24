@@ -8,6 +8,7 @@ import { AnalyticsService } from '@main/services/AnalyticsService'
 import { ApiServerService } from '@main/services/ApiServerService'
 import { AppMenuService } from '@main/services/AppMenuService'
 import { AppUpdaterService } from '@main/services/AppUpdaterService'
+import { BackupService } from '@main/services/backup/BackupService'
 import { CodeCliService } from '@main/services/CodeCliService'
 import { KnowledgeOrchestrationService, KnowledgeRuntimeService } from '@main/services/knowledge'
 import { KnowledgeVectorStoreService } from '@main/services/knowledge/vectorstore/KnowledgeVectorStoreService'
@@ -91,7 +92,8 @@ export const services = {
   KnowledgeRuntimeService,
   AgentBootstrapService,
   ApiServerService,
-  AppUpdaterService
+  AppUpdaterService,
+  BackupService
 } as const
 
 /** Auto-derived service name to instance type mapping */
