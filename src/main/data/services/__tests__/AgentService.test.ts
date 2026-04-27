@@ -1,6 +1,9 @@
 import { agentTable } from '@data/db/schemas/agent'
 import { entityTagTable, tagTable } from '@data/db/schemas/tagging'
+import { userModelTable } from '@data/db/schemas/userModel'
+import { userProviderTable } from '@data/db/schemas/userProvider'
 import { agentService } from '@data/services/AgentService'
+import { createUniqueModelId } from '@shared/data/types/model'
 import { setupTestDatabase } from '@test-helpers/db'
 import { and, eq } from 'drizzle-orm'
 import { describe, expect, it, vi } from 'vitest'
@@ -58,6 +61,20 @@ describe('AgentService', () => {
     }
     await dbh.db.insert(agentTable).values(base)
     return { id }
+  }
+
+  async function seedModelRefs() {
+    await dbh.db.insert(userProviderTable).values({ providerId: 'anthropic', name: 'Anthropic' })
+    await dbh.db.insert(userModelTable).values({
+      id: createUniqueModelId('anthropic', 'claude-sonnet-4-5'),
+      providerId: 'anthropic',
+      modelId: 'claude-sonnet-4-5',
+      presetModelId: 'claude-sonnet-4-5',
+      name: 'Claude Sonnet 4.5',
+      isEnabled: true,
+      isHidden: false,
+      sortOrder: 0
+    })
   }
 
   describe('deleteAgent', () => {
@@ -132,6 +149,26 @@ describe('AgentService', () => {
       // Ordering contract: alphabetical by tag name within each agent.
       expect(tagged?.tags.map((t) => t.name)).toEqual(['play', 'work'])
       expect(untagged?.tags).toEqual([])
+    })
+
+    it('embeds modelName resolved from user_model', async () => {
+      await seedModelRefs()
+      const bound = await insertAgent({
+        id: 'agent_model_test_1',
+        name: 'bound',
+        model: 'anthropic::claude-sonnet-4-5'
+      })
+      const missing = await insertAgent({
+        id: 'agent_model_test_2',
+        name: 'missing',
+        model: 'anthropic::deleted-model'
+      })
+
+      const { agents } = await agentService.listAgents()
+      const byId = new Map(agents.map((agent) => [agent.id, agent]))
+
+      expect(byId.get(bound.id)?.modelName).toBe('Claude Sonnet 4.5')
+      expect(byId.get(missing.id)?.modelName).toBeNull()
     })
 
     it('filters by search against name OR description (case-insensitive)', async () => {

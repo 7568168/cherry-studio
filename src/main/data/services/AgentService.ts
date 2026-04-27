@@ -5,6 +5,7 @@ import { agentSessionTable as sessionsTable } from '@data/db/schemas/agentSessio
 import { agentSkillTable as agentSkillsTable } from '@data/db/schemas/agentSkill'
 import { agentTaskTable as scheduledTasksTable } from '@data/db/schemas/agentTask'
 import { entityTagTable, tagTable } from '@data/db/schemas/tagging'
+import { userModelTable } from '@data/db/schemas/userModel'
 import { defaultHandlersFor, withSqliteErrors } from '@data/db/sqliteErrors'
 import type { DbOrTx, DbType } from '@data/db/types'
 import { nullsToUndefined, timestampToISO } from '@data/services/utils/rowMappers'
@@ -25,7 +26,12 @@ import { tagService } from './TagService'
 
 const logger = loggerService.withContext('AgentService')
 
-function rowToAgent(row: AgentRow, tags: Tag[] = []): AgentEntity {
+function pickModelName(modelId: string | null | undefined, names: Map<string, string>): string | null {
+  if (!modelId) return null
+  return names.get(modelId) ?? null
+}
+
+function rowToAgent(row: AgentRow, tags: Tag[] = [], modelName: string | null = null): AgentEntity {
   const clean = nullsToUndefined(row)
   return {
     ...clean,
@@ -33,7 +39,8 @@ function rowToAgent(row: AgentRow, tags: Tag[] = []): AgentEntity {
     accessiblePaths: row.accessiblePaths ?? [],
     createdAt: timestampToISO(row.createdAt),
     updatedAt: timestampToISO(row.updatedAt),
-    tags
+    tags,
+    modelName
   }
 }
 
@@ -47,6 +54,30 @@ function computeWorkspacePaths(paths: string[] | undefined, id: string): string[
 
 export class AgentService {
   static readonly DEFAULT_AGENT_ID = CHERRY_CLAW_AGENT_ID
+
+  /**
+   * Batch-resolve the primary agent model's display name from `user_model`.
+   * Missing ids are represented by absent map entries so callers can return
+   * `null`, matching the assistant read contract.
+   */
+  private async getModelNamesByUniqueIds(
+    uniqueIds: (string | null | undefined)[],
+    tx: Pick<DbType, 'select'> = application.get('DbService').getDb()
+  ): Promise<Map<string, string>> {
+    const result = new Map<string, string>()
+    const ids = Array.from(new Set(uniqueIds.filter((id): id is string => typeof id === 'string' && id.length > 0)))
+    if (ids.length === 0) return result
+
+    const rows = await tx
+      .select({ id: userModelTable.id, name: userModelTable.name })
+      .from(userModelTable)
+      .where(inArray(userModelTable.id, ids))
+
+    for (const row of rows) {
+      if (row.name) result.set(row.id, row.name)
+    }
+    return result
+  }
 
   /**
    * Batch-load tags for a set of agents via inline JOIN of `entity_tag` + `tag`.
@@ -120,7 +151,7 @@ export class AgentService {
     }
 
     const database = application.get('DbService').getDb()
-    const { row, tags } = await withSqliteErrors(
+    const { row, tags, modelName } = await withSqliteErrors(
       () =>
         database.transaction(async (tx) => {
           await tx.update(agentsTable).set({ sortOrder: sql`${agentsTable.sortOrder} + 1` })
@@ -135,13 +166,16 @@ export class AgentService {
             throw DataApiErrorFactory.invalidOperation('create agent', 'insert succeeded but select returned no row')
           }
           // Re-read bound tags inside the tx so the response reflects freshly-written bindings.
-          const tagMap = await this.getTagsByAgentIds([id], tx)
-          return { row: inserted, tags: tagMap.get(id) ?? [] }
+          const [tagMap, modelNames] = await Promise.all([
+            this.getTagsByAgentIds([id], tx),
+            this.getModelNamesByUniqueIds([inserted.model], tx)
+          ])
+          return { row: inserted, tags: tagMap.get(id) ?? [], modelName: pickModelName(inserted.model, modelNames) }
         }),
       defaultHandlersFor('Agent', id)
     )
 
-    return rowToAgent(row, tags)
+    return rowToAgent(row, tags, modelName)
   }
 
   private async findAgentRow(id: string, options: { includeDeleted?: boolean } = {}): Promise<AgentRow | undefined> {
@@ -158,8 +192,11 @@ export class AgentService {
   async getAgent(id: string): Promise<AgentEntity | null> {
     const row = await this.findAgentRow(id)
     if (!row) return null
-    const tagMap = await this.getTagsByAgentIds([id])
-    return rowToAgent(row, tagMap.get(id) ?? [])
+    const [tagMap, modelNames] = await Promise.all([
+      this.getTagsByAgentIds([id]),
+      this.getModelNamesByUniqueIds([row.model])
+    ])
+    return rowToAgent(row, tagMap.get(id) ?? [], pickModelName(row.model, modelNames))
   }
 
   async listAgents(options: ListOptions = {}): Promise<{ agents: AgentEntity[]; total: number }> {
@@ -228,8 +265,11 @@ export class AgentService {
           : await baseQuery.limit(options.limit)
         : await baseQuery
 
-    const tagMap = await this.getTagsByAgentIds(result.map((row) => row.id))
-    const agents = result.map((row) => rowToAgent(row, tagMap.get(row.id) ?? []))
+    const [tagMap, modelNames] = await Promise.all([
+      this.getTagsByAgentIds(result.map((row) => row.id)),
+      this.getModelNamesByUniqueIds(result.map((row) => row.model))
+    ])
+    const agents = result.map((row) => rowToAgent(row, tagMap.get(row.id) ?? [], pickModelName(row.model, modelNames)))
 
     return { agents, total: totalResult[0].count }
   }

@@ -87,7 +87,12 @@ export const AgentEntitySchema = AgentBaseSchema.extend({
    * DTOs; the read shape carries full Tag rows so the UI can render
    * names + colors without a follow-up `/tags` round-trip.
    */
-  tags: z.array(TagSchema)
+  tags: z.array(TagSchema),
+  /**
+   * Human-readable primary model name resolved from `user_model.name` at read
+   * time. Edits still go through the `model` UniqueModelId field.
+   */
+  modelName: z.string().nullable().default(null)
 })
 export type AgentEntity = z.infer<typeof AgentEntitySchema>
 
