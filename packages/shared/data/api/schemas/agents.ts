@@ -8,6 +8,7 @@
 
 import * as z from 'zod'
 
+import { TagIdSchema, TagSchema } from '../../types/tag'
 import type { OffsetPaginationResponse } from '../apiTypes'
 
 // ============================================================================
@@ -79,7 +80,14 @@ export const AgentEntitySchema = AgentBaseSchema.extend({
   id: z.string(),
   type: z.enum(['claude-code']),
   createdAt: z.string(),
-  updatedAt: z.string()
+  updatedAt: z.string(),
+  /**
+   * Tags bound to this agent. Embedded by `AgentService.list` / `getAgent`
+   * via inline JOIN on `entity_tag`. Writes use `tagIds` on Create/Update
+   * DTOs; the read shape carries full Tag rows so the UI can render
+   * names + colors without a follow-up `/tags` round-trip.
+   */
+  tags: z.array(TagSchema)
 })
 export type AgentEntity = z.infer<typeof AgentEntitySchema>
 
@@ -177,13 +185,25 @@ export type InstalledSkill = z.infer<typeof InstalledSkillSchema>
 // Agent DTOs (derived via .pick() from AgentEntitySchema — Rule C)
 // ============================================================================
 
+/**
+ * Shared tag-binding field for Create / Update DTOs. Mirrors the
+ * `mcpServerIds` / `knowledgeBaseIds` semantics on assistants:
+ *   - `undefined` → leave existing bindings untouched
+ *   - `[]`        → clear all bindings
+ *   - `[...ids]`  → replace bindings with this exact set
+ */
+const AgentTagIdsField = z.array(TagIdSchema).optional()
+
 export const CreateAgentSchema = AgentEntitySchema.pick({ type: true, ...AGENT_MUTABLE_FIELDS }).extend({
-  accessiblePaths: z.array(z.string()).default([])
+  accessiblePaths: z.array(z.string()).default([]),
+  tagIds: AgentTagIdsField
 })
 export type CreateAgentDto = z.infer<typeof CreateAgentSchema>
 
 // Update picks directly from the entity (not from Create) to avoid .default([]) bleeding into partial updates.
-export const UpdateAgentSchema = AgentEntitySchema.pick(AGENT_MUTABLE_FIELDS).partial()
+export const UpdateAgentSchema = AgentEntitySchema.pick(AGENT_MUTABLE_FIELDS)
+  .partial()
+  .extend({ tagIds: AgentTagIdsField })
 export type UpdateAgentDto = z.infer<typeof UpdateAgentSchema>
 
 // ============================================================================
@@ -225,6 +245,31 @@ export const ListQuerySchema = z.strictObject({
 })
 export type ListQuery = z.infer<typeof ListQuerySchema>
 
+export const AGENTS_DEFAULT_PAGE = 1
+export const AGENTS_DEFAULT_LIMIT = 100
+export const AGENTS_MAX_LIMIT = 500
+
+/**
+ * Query parameters for `GET /agents`. Mirrors the assistants list contract:
+ * - `search` LIKEs against `name` OR `description` (case-insensitive,
+ *   wildcards in the raw input are escaped server-side).
+ * - `tagIds` filters to agents bound to ANY of the given tags (union /
+ *   OR semantics, matches the resource-library chip picker).
+ * - `search` and `tagIds` compose with AND.
+ */
+export const ListAgentsQuerySchema = z.object({
+  /** Free-text match against name OR description (case-insensitive LIKE). */
+  search: z.string().trim().min(1).optional(),
+  /** Return agents bound to ANY of these tag ids (union). */
+  tagIds: z.array(TagIdSchema).min(1).optional(),
+  /** Positive integer, defaults to {@link AGENTS_DEFAULT_PAGE}. */
+  page: z.int().positive().default(AGENTS_DEFAULT_PAGE),
+  /** Positive integer, max {@link AGENTS_MAX_LIMIT}, defaults to {@link AGENTS_DEFAULT_LIMIT}. */
+  limit: z.int().positive().max(AGENTS_MAX_LIMIT).default(AGENTS_DEFAULT_LIMIT)
+})
+export type ListAgentsQueryParams = z.input<typeof ListAgentsQuerySchema>
+export type ListAgentsQuery = z.output<typeof ListAgentsQuerySchema>
+
 // ============================================================================
 // API Schema definitions
 // ============================================================================
@@ -233,7 +278,7 @@ export type AgentSchemas = {
   /** List all agents, create a new agent */
   '/agents': {
     GET: {
-      query?: ListQuery
+      query?: ListAgentsQueryParams
       response: OffsetPaginationResponse<AgentEntity>
     }
     POST: {

@@ -8,10 +8,10 @@ import { getRandomTagColor } from '../constants'
 import type { ResourceType } from '../types'
 import type { EntityTagsResult, TagListResult } from './types'
 
-// EntityType currently enumerates 'assistant' | 'topic' | 'session'.
-// For this PR, only 'assistant' is wired through the tag API; 'agent' / 'skill'
-// short-circuit to an empty result until the enum is extended in a follow-up task.
-const SUPPORTED_ENTITY_TYPES: readonly ResourceType[] = ['assistant'] as const
+// EntityType enumerates 'assistant' | 'agent' | 'topic' | 'session'.
+// Library-side resources that participate in tagging today: 'assistant' + 'agent'.
+// 'skill' has no junction-table relation yet — short-circuit to an empty result.
+const SUPPORTED_ENTITY_TYPES: readonly ResourceType[] = ['assistant', 'agent'] as const
 
 function isSupportedEntityType(type: ResourceType): type is Extract<EntityType, ResourceType> {
   return SUPPORTED_ENTITY_TYPES.includes(type)

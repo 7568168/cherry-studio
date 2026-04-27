@@ -21,6 +21,7 @@ import {
   CreateAgentSchema,
   CreateSessionSchema,
   CreateTaskSchema,
+  ListAgentsQuerySchema,
   type ListQuery,
   UpdateAgentSchema,
   UpdateSessionSchema,
@@ -37,8 +38,11 @@ function paginationFromQuery(query?: ListQuery) {
 export const agentHandlers: HandlersFor<AgentSchemas> = {
   '/agents': {
     GET: async ({ query }) => {
-      const { page, limit, offset } = paginationFromQuery(query)
-      const { agents, total } = await agentService.listAgents({ limit, offset })
+      const parsed = ListAgentsQuerySchema.safeParse(query ?? {})
+      if (!parsed.success) throw toDataApiError(parsed.error)
+      const { search, tagIds, page, limit } = parsed.data
+      const offset = (page - 1) * limit
+      const { agents, total } = await agentService.listAgents({ limit, offset, search, tagIds })
       return { items: agents, total, page }
     },
 
