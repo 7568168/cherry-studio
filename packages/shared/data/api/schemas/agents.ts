@@ -178,7 +178,12 @@ export const InstalledSkillSchema = z.strictObject({
   sourceUrl: z.string().nullable(),
   namespace: z.string().nullable(),
   author: z.string().nullable(),
-  tags: z.array(z.string()),
+  /**
+   * User-defined global tags bound through `entity_tag`.
+   * Skill metadata tags from SKILL.md are exposed separately as `sourceTags`.
+   */
+  tags: z.array(TagSchema),
+  sourceTags: z.array(z.string()).optional(),
   contentHash: z.string(),
   isEnabled: z.boolean(),
   createdAt: z.string(),
@@ -274,6 +279,25 @@ export const ListAgentsQuerySchema = z.object({
 })
 export type ListAgentsQueryParams = z.input<typeof ListAgentsQuerySchema>
 export type ListAgentsQuery = z.output<typeof ListAgentsQuerySchema>
+
+/**
+ * Query parameters for `GET /skills`.
+ *
+ * Skills keep their historical direct-array response shape (no pagination UI
+ * in the resource library yet), but filtering must still happen in the service
+ * SQL layer:
+ * - `agentId` only controls per-agent `isEnabled` decoration.
+ * - `search` LIKEs against `name` OR `description`.
+ * - `tagIds` filters skills bound to ANY of the given global tags.
+ * - `search` and `tagIds` compose with AND.
+ */
+export const ListSkillsQuerySchema = z.object({
+  agentId: z.string().min(1).optional(),
+  search: z.string().trim().min(1).optional(),
+  tagIds: z.array(TagIdSchema).min(1).optional()
+})
+export type ListSkillsQueryParams = z.input<typeof ListSkillsQuerySchema>
+export type ListSkillsQuery = z.output<typeof ListSkillsQuerySchema>
 
 // ============================================================================
 // API Schema definitions
@@ -391,7 +415,7 @@ export type AgentSchemas = {
   /** List all installed skills (optionally filtered by agent) */
   '/skills': {
     GET: {
-      query: { agentId?: string }
+      query?: ListSkillsQueryParams
       response: InstalledSkill[]
     }
   }

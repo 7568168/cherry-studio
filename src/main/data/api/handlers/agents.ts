@@ -23,6 +23,7 @@ import {
   CreateTaskSchema,
   ListAgentsQuerySchema,
   type ListQuery,
+  ListSkillsQuerySchema,
   UpdateAgentSchema,
   UpdateSessionSchema,
   UpdateTaskSchema
@@ -171,11 +172,16 @@ export const agentHandlers: HandlersFor<AgentSchemas> = {
 
   '/skills': {
     GET: async ({ query }) => {
-      if (query?.agentId) {
-        const agent = await agentService.getAgent(query.agentId)
-        if (!agent) throw DataApiErrorFactory.notFound('Agent', query.agentId)
+      const parsed = ListSkillsQuerySchema.safeParse(query ?? {})
+      if (!parsed.success) throw toDataApiError(parsed.error)
+      const { agentId } = parsed.data
+
+      if (agentId) {
+        const agent = await agentService.getAgent(agentId)
+        if (!agent) throw DataApiErrorFactory.notFound('Agent', agentId)
       }
-      return await skillService.list(query?.agentId)
+
+      return await skillService.list(parsed.data)
     }
   },
 
