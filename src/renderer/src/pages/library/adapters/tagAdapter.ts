@@ -1,6 +1,6 @@
 import { dataApiService } from '@data/DataApiService'
 import { useMutation, useQuery } from '@data/hooks/useDataApi'
-import type { EntityType } from '@shared/data/types/entityType'
+import type { TaggableEntityType } from '@shared/data/api/schemas/tags'
 import type { Tag } from '@shared/data/types/tag'
 import { useCallback, useMemo } from 'react'
 
@@ -8,12 +8,12 @@ import { getRandomTagColor } from '../constants'
 import type { ResourceType } from '../types'
 import type { EntityTagsResult, TagListResult } from './types'
 
-// EntityType enumerates 'assistant' | 'agent' | 'topic' | 'session'.
-// Library-side resources that participate in tagging today: 'assistant' + 'agent'.
-// 'skill' has no junction-table relation yet — short-circuit to an empty result.
-const SUPPORTED_ENTITY_TYPES: readonly ResourceType[] = ['assistant', 'agent'] as const
+// EntityType includes more domains than the resource library exposes. Keep the
+// supported subset local so renderer callers don't accidentally fire tag reads
+// for a resource type that has no entity_tag contract.
+const SUPPORTED_ENTITY_TYPES: readonly ResourceType[] = ['assistant', 'agent', 'skill'] as const
 
-function isSupportedEntityType(type: ResourceType): type is Extract<EntityType, ResourceType> {
+function isSupportedEntityType(type: ResourceType): type is Extract<TaggableEntityType, ResourceType> {
   return SUPPORTED_ENTITY_TYPES.includes(type)
 }
 
@@ -42,7 +42,7 @@ export function useEntityTags(entityType: ResourceType, entityId: string | undef
     if (!supported || !entityId) {
       return '/tags/entities/assistant/placeholder' as const
     }
-    return `/tags/entities/${entityType as EntityType}/${entityId}` as const
+    return `/tags/entities/${entityType as TaggableEntityType}/${entityId}` as const
   }, [supported, entityType, entityId])
 
   const { data, isLoading, error, refetch } = useQuery(path, { enabled: supported })
@@ -83,6 +83,38 @@ export function useTagMutations() {
   )
 
   return { createTag }
+}
+
+// Map a taggable entity type to the resource list path whose cards may render
+// the bound tag chips. Keep this aligned with `SUPPORTED_ENTITY_TYPES` above.
+const LIST_PATH_BY_ENTITY: Partial<Record<TaggableEntityType, '/assistants' | '/agents' | '/skills'>> = {
+  assistant: '/assistants',
+  agent: '/agents',
+  skill: '/skills'
+}
+
+export function useSyncEntityTags() {
+  const { trigger: syncTrigger } = useMutation('PUT', '/tags/entities/:entityType/:entityId', {
+    refresh: ({ args }) => {
+      const params = args?.params
+      if (!params) return ['/tags']
+      const listPath = LIST_PATH_BY_ENTITY[params.entityType]
+      const paths: string[] = ['/tags', `/tags/entities/${params.entityType}/${params.entityId}`]
+      if (listPath) paths.push(listPath)
+      return paths
+    }
+  })
+
+  const syncEntityTags = useCallback(
+    (entityType: Extract<TaggableEntityType, ResourceType>, entityId: string, tagIds: string[]): Promise<void> =>
+      syncTrigger({
+        params: { entityType, entityId },
+        body: { tagIds }
+      }),
+    [syncTrigger]
+  )
+
+  return { syncEntityTags }
 }
 
 /**
