@@ -58,6 +58,12 @@ export type CreateAssistantDto = z.infer<typeof CreateAssistantSchema>
 
 /**
  * DTO for updating an existing assistant. All fields optional, chain-derived from Create.
+ *
+ * Note: entity `.default()` modifiers are preserved through `.partial()`, so a naive
+ * `.parse(body)` would inject defaults for omitted fields and overwrite existing rows.
+ * Handlers must strip injected keys via `body`-presence filtering before forwarding to the
+ * service (see `/assistants/:id` PATCH handler).
+ *
  * Relation arrays (mcpServerIds, knowledgeBaseIds, tagIds), if provided, replace existing junction table rows.
  */
 export const UpdateAssistantSchema = CreateAssistantSchema.partial()
